@@ -58,6 +58,8 @@ var keywords = map[string]TokenType{
 	"return": RETURN,
 }
 
+// 擦，这有点草率吧，如果 identifier 也叫这个呢？
+// 我是傻逼
 func LookupIdent(ident string) TokenType {
 	if tok, ok := keywords[ident]; ok {
 		return tok
