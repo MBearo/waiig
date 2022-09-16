@@ -1,28 +1,12 @@
 package lexer
 
-import "panda/token"
+import "dog/token"
 
 type Lexer struct {
 	input        string
 	position     int
-	readPosition int
+	readPosition int // 永远比positon大1，如果position到了最后，readPosition就是0
 	ch           byte
-}
-
-func New(input string) *Lexer {
-	l := &Lexer{input: input}
-	l.readChar()
-	return l
-}
-
-func (l *Lexer) readChar() {
-	if l.readPosition >= len(l.input) {
-		l.ch = 0
-	} else {
-		l.ch = l.input[l.readPosition] // readPosition 默认是0？// int 类型默认是0
-	}
-	l.position = l.readPosition
-	l.readPosition += 1
 }
 
 func (l *Lexer) NextToken() token.Token {
@@ -31,10 +15,8 @@ func (l *Lexer) NextToken() token.Token {
 	switch l.ch {
 	case '=':
 		if l.peekChar() == '=' {
-			ch := l.ch
-			l.readChar() // 往前挪了一个
-			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.EQ, Literal: literal} // newToken 的第二个参数类型是char
+			l.readChar()
+			tok = token.Token{Type: token.EQ, Literal: "=="} // 这么写不就完了
 		} else {
 			tok = newToken(token.ASSIGN, l.ch)
 		}
@@ -44,10 +26,8 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.MINUS, l.ch)
 	case '!':
 		if l.peekChar() == '=' {
-			ch := l.ch
 			l.readChar()
-			literal := string(ch) + string(l.ch)
-			tok = token.Token{Type: token.NOT_EQ, Literal: literal}
+			tok = token.Token{Type: token.NOT_EQ, Literal: "!="}
 		} else {
 			tok = newToken(token.BANG, l.ch)
 		}
@@ -71,40 +51,46 @@ func (l *Lexer) NextToken() token.Token {
 		tok = newToken(token.LPAREN, l.ch)
 	case ')':
 		tok = newToken(token.RPAREN, l.ch)
-	case 0:
-		tok.Literal = ""
-		tok.Type = token.EOF
+	case 0: // readChar 到头了
+		return token.Token{Type: token.EOF, Literal: ""} // 应该不用再执行readchar了吧
 	default:
+		// 有可能是keyword 有可能是 identifier
 		if isLetter(l.ch) {
-			tok.Literal = l.readIdentifier() // 这里还没给type呢
-			tok.Type = token.LookupIdent(tok.Literal)
-			return tok
+			literal := l.readIdentifier()
+			if token.LookupIdent(literal) == token.IDENT {
+				return token.Token{Type: token.IDENT, Literal: literal}
+			} else {
+				return token.Token{Type: token.LookupIdent(literal), Literal: literal}
+			}
 		} else if isDigit(l.ch) {
-			// tok.Type = token.INT
-			// tok.Literal = l.readNumber()
-			// return tok
 			return token.Token{Type: token.INT, Literal: l.readNumber()}
 		} else {
-			tok = newToken(token.ILLEGAL, l.ch) // 这里不用return么？奇怪
+			return token.Token{Type: token.ILLEGAL, Literal: string(l.ch)}
 		}
 	}
-
 	l.readChar()
 	return tok
 }
 
-func (l *Lexer) skipWhitespace() {
-	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
-		l.readChar()
+// 这里得用引用了，不然不会改变原来的值
+// 调用这个实际会往前走一步
+func (l *Lexer) readChar() {
+	if l.readPosition >= len(l.input) {
+		l.ch = 0
+	} else {
+		l.ch = l.input[l.readPosition]
 	}
+	l.position = l.readPosition
+	l.readPosition += 1
 }
 
+// 为啥叫这个名字，let 也不是 identifier 把
 func (l *Lexer) readIdentifier() string {
 	position := l.position
-	for isLetter(l.ch) { // 这个有点意思
+	for isLetter(l.ch) {
 		l.readChar()
 	}
-	return l.input[position:l.position] //这是截取一段字符串，妙啊
+	return l.input[position:l.position]
 }
 
 func (l *Lexer) readNumber() string {
@@ -115,6 +101,12 @@ func (l *Lexer) readNumber() string {
 	return l.input[position:l.position]
 }
 
+func (l *Lexer) skipWhitespace() {
+	for l.ch == ' ' || l.ch == '\t' || l.ch == '\n' || l.ch == '\r' {
+		l.readChar()
+	}
+}
+
 func (l *Lexer) peekChar() byte {
 	if l.readPosition >= len(l.input) {
 		return 0
@@ -123,15 +115,20 @@ func (l *Lexer) peekChar() byte {
 	}
 }
 
-func newToken(tokenType token.TokenType, ch byte) token.Token {
-	return token.Token{Type: tokenType, Literal: string(ch)}
+func New(input string) *Lexer {
+	// 这里不用引用行么？
+	l := &Lexer{input: input}
+	l.readChar()
+	return l
 }
 
+// byte类型可以做比较，有意思
 func isLetter(ch byte) bool {
-	// _ 也算作字母了
 	return 'a' <= ch && ch <= 'z' || 'A' <= ch && ch <= 'Z' || ch == '_'
 }
-
 func isDigit(ch byte) bool {
 	return '0' <= ch && ch <= '9'
+}
+func newToken(tokenType token.TokenType, ch byte) token.Token {
+	return token.Token{Type: tokenType, Literal: string(ch)}
 }
