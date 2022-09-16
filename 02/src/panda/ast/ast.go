@@ -30,7 +30,7 @@ func (p *Program) TokenLiteral() string {
 
 type LetStatement struct {
 	Token token.Token
-	Name  *Identifier // TODO 这为啥是个指针
+	Name  *Identifier // ? 这为啥是个指针
 	Value Experssion
 }
 
