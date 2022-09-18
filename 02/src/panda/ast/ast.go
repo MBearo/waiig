@@ -31,7 +31,7 @@ func (p *Program) TokenLiteral() string {
 type LetStatement struct {
 	Token token.Token
 	Name  *Identifier // ? 这为啥是个指针
-	Value Experssion
+	Value Experssion  // ? 这为啥是个interface
 }
 
 func (ls *LetStatement) statementNode() {}
@@ -47,4 +47,14 @@ type Identifier struct {
 func (i *Identifier) expressionNode() {}
 func (i *Identifier) TokenLiteral() string {
 	return i.Token.Literal
+}
+
+type ReturnStatement struct {
+	Token       token.Token // the 'return' token
+	ReturnValue Experssion
+}
+
+func (rs *ReturnStatement) statementNode() {}
+func (rs *ReturnStatement) TokenLiteral() string {
+	return rs.Token.Literal
 }
