@@ -7,16 +7,46 @@ import (
 	"panda/token"
 )
 
+// 运算符优先级
+const (
+	_ int = iota // 相当于是0，然后下面的数依次递增
+	LOWEST
+	EQUALS      // ==
+	LESSGREATER // > or <
+	SUM         // +
+	PRODUCT     // *
+	PREFIX      // -X or !X
+	CALL        // myFunction(X)
+)
+
+// OvO 奇怪的语法增加了
+type (
+	prefixParseFn func() ast.Expression
+	infixParseFn  func(ast.Expression) ast.Expression
+)
+
 type Parser struct {
 	l         *lexer.Lexer
 	curToken  token.Token
 	peerToken token.Token
 	errors    []string
+
+	prefixParseFns map[token.TokenType]prefixParseFn
+	infixParseFns  map[token.TokenType]infixParseFn
 }
 
-func (p *Parser) nextToken() {
-	p.curToken = p.peerToken
-	p.peerToken = p.l.NextToken()
+func New(l *lexer.Lexer) *Parser {
+	p := &Parser{
+		l:      l,
+		errors: []string{},
+	}
+
+	p.prefixParseFns = make(map[token.TokenType]prefixParseFn) // 为啥上来就来这么一下子，不懂
+	p.registerPrefix(token.IDENT, p.parseIdentifier)           // 不同的token类型用不同的parse方法？
+
+	p.nextToken()
+	p.nextToken()
+	return p
 }
 
 func (p *Parser) ParseProgram() *ast.Program {
@@ -40,7 +70,7 @@ func (p *Parser) parseStatement() ast.Statement {
 	case token.RETURN:
 		return p.parseReturnStatement()
 	default:
-		return nil
+		return p.parseExpressionStatement()
 	}
 }
 
@@ -75,6 +105,28 @@ func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	return stmt
 }
 
+func (p *Parser) parseExpressionStatement() *ast.ExpressionStatement {
+	stmt := &ast.ExpressionStatement{Token: p.curToken}
+	stmt.Expression = p.parseExpression(LOWEST)
+	if p.peekTokenIs(token.SEMICOLON) {
+		p.nextToken()
+	}
+	return stmt
+}
+
+func (p *Parser) parseExpression(precedence int) ast.Expression {
+	prefix := p.prefixParseFns[p.curToken.Type]
+	if prefix == nil {
+		return nil
+	}
+	leftExp := prefix()
+	return leftExp
+}
+
+func (p *Parser) parseIdentifier() ast.Expression {
+	return &ast.Identifier{Token: p.curToken, Value: p.curToken.Literal}
+}
+
 func (p *Parser) expectPeek(t token.TokenType) bool {
 	if p.peekTokenIs(t) {
 		p.nextToken()
@@ -83,6 +135,11 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
 		p.peekError(t)
 		return false
 	}
+}
+
+func (p *Parser) nextToken() {
+	p.curToken = p.peerToken
+	p.peerToken = p.l.NextToken()
 }
 
 func (p *Parser) peekTokenIs(t token.TokenType) bool {
@@ -102,12 +159,10 @@ func (p *Parser) peekError(t token.TokenType) {
 	p.errors = append(p.errors, msg)
 }
 
-func New(l *lexer.Lexer) *Parser {
-	p := &Parser{
-		l:      l,
-		errors: []string{},
-	}
-	p.nextToken()
-	p.nextToken()
-	return p
+func (p *Parser) registerPrefix(tokenType token.TokenType, fn prefixParseFn) {
+	p.prefixParseFns[tokenType] = fn
+}
+
+func (p *Parser) registerInfix(tokenType token.TokenType, fn infixParseFn) {
+	p.infixParseFns[tokenType] = fn
 }
