@@ -145,7 +145,8 @@ func (pe *PrefixExpression) TokenLiteral() string {
 func (pe *PrefixExpression) String() string {
 	var out bytes.Buffer
 
-	out.WriteString("(")
+	// 只在 string 方法里加的，为了给人看的
+	out.WriteString("(") // 这个括号有意思，包括 infix expression 的也是
 	out.WriteString(pe.Operator)
 	out.WriteString(pe.Right.String())
 	out.WriteString(")")
