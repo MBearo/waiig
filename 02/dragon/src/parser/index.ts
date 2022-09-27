@@ -48,7 +48,7 @@ export class Parser {
         this.registerPrefix(TokenType.INT, this.parseIntegerLiteral);
         this.registerPrefix(TokenType.BANG, this.parsePrefixExpression);
         this.registerPrefix(TokenType.MINUS, this.parsePrefixExpression);
-
+        
         this.registerInfix(TokenType.PLUS, this.parseInfixExpression);
         this.registerInfix(TokenType.MINUS, this.parseInfixExpression);
         this.registerInfix(TokenType.SLASH, this.parseInfixExpression);
@@ -129,7 +129,7 @@ export class Parser {
         }
         return stmt;
     }
-
+    // ! 核心算法
     parseExpression(precedence: Precedence): Expression {
         const prefix = this.prefixParseFns[this.curToken?.type as TokenType];
         if (!prefix) {
@@ -139,13 +139,15 @@ export class Parser {
         }
 
         let leftExp = prefix.call(this);
-
+        // precedence < this.peekPrecedence() 判断优先级
         while (!this.peekTokenIs(TokenType.SEMICOLON) && precedence < this.peekPrecedence()) {
+            // 这个 peek 感觉很关键
             const infix = this.infixParseFns[this.peekToken?.type as TokenType];
             if (!infix) {
                 return leftExp;
             }
             this.nextToken();
+            // 调用 infx 会再 nextToken 一下
             leftExp = infix.call(this, leftExp);
         }
         return leftExp
@@ -184,6 +186,7 @@ export class Parser {
         });
         const precedence = this.curPrecedence();
         this.nextToken();
+        // ! 妙蛙种子他妈给妙蛙种子开门
         expression.right = this.parseExpression(precedence);
         return expression;
     }
