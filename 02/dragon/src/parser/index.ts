@@ -1,4 +1,13 @@
-import { ExpressionStatement, Identifier, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression, ReturnStatement } from "../ast";
+import {
+    ExpressionStatement,
+    Identifier,
+    InfixExpression,
+    IntegerLiteral,
+    LetStatement,
+    PrefixExpression,
+    ReturnStatement,
+    Boolean
+} from "../ast";
 import type { Expression, Statement } from '../ast'
 import { Lexer } from "../lexer";
 import { Token, TokenType } from "../token";
@@ -48,7 +57,10 @@ export class Parser {
         this.registerPrefix(TokenType.INT, this.parseIntegerLiteral);
         this.registerPrefix(TokenType.BANG, this.parsePrefixExpression);
         this.registerPrefix(TokenType.MINUS, this.parsePrefixExpression);
-        
+        this.registerPrefix(TokenType.TRUE, this.parseBoolean);
+        this.registerPrefix(TokenType.FALSE, this.parseBoolean);
+        this.registerPrefix(TokenType.LPAREN, this.parseGroupedExpression);
+
         this.registerInfix(TokenType.PLUS, this.parseInfixExpression);
         this.registerInfix(TokenType.MINUS, this.parseInfixExpression);
         this.registerInfix(TokenType.SLASH, this.parseInfixExpression);
@@ -189,6 +201,23 @@ export class Parser {
         // ! 妙蛙种子他妈给妙蛙种子开门
         expression.right = this.parseExpression(precedence);
         return expression;
+    }
+
+    parseBoolean() {
+        return new Boolean({
+            token: this.curToken as Token,
+            value: this.curTokenIs(TokenType.TRUE)
+        });
+    }
+
+    parseGroupedExpression() {
+        this.nextToken();
+        const exp = this.parseExpression(Precedence.LOWEST);
+        // TODO 这里咋处理呢
+        if (!this.expectPeek(TokenType.RPAREN)) {
+            return null as any;
+        }
+        return exp;
     }
 
     expectPeek(t: TokenType) {

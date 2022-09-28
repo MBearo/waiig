@@ -205,3 +205,23 @@ export class InfixExpression implements Expression {
         return out;
     }
 }
+
+export class Boolean implements Expression {
+    token: Token;
+    value: boolean;
+
+    constructor({ token, value }: { token: Token; value: boolean }) {
+        this.token = token;
+        this.value = value;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    expressionNode() { }
+
+    tokenLiteral(): string {
+        return this.token.literal;
+    }
+
+    string(): string {
+        return this.token.literal;
+    }
+}

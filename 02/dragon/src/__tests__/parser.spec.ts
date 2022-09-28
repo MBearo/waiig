@@ -1,5 +1,14 @@
 import { describe, expect, test } from '@jest/globals';
-import { ExpressionStatement, InfixExpression, IntegerLiteral, LetStatement, PrefixExpression } from '../ast';
+import {
+    Expression,
+    ExpressionStatement,
+    Identifier,
+    InfixExpression,
+    IntegerLiteral,
+    LetStatement,
+    PrefixExpression,
+    Boolean
+} from '../ast';
 import { Lexer } from '../lexer';
 import { Parser } from '../parser';
 
@@ -110,6 +119,9 @@ describe('parser', () => {
             { input: '5 < 5;', leftValue: 5, operator: '<', rightValue: 5 },
             { input: '5 == 5;', leftValue: 5, operator: '==', rightValue: 5 },
             { input: '5 != 5;', leftValue: 5, operator: '!=', rightValue: 5 },
+            { input: 'true == true', leftValue: true, operator: '==', rightValue: true },
+            { input: 'true != false', leftValue: true, operator: '!=', rightValue: false },
+            { input: 'false == false', leftValue: false, operator: '==', rightValue: false },
         ];
         infixTests.forEach((tt) => {
             const l = new Lexer(tt.input);
@@ -119,10 +131,8 @@ describe('parser', () => {
             expect(program).not.toBeNull();
             expect(program.statements.length).toBe(1);
             const stmt = program.statements[0] as ExpressionStatement;
-            const exp = stmt.expression as InfixExpression;
-            testIntegerLiteral(exp?.left as IntegerLiteral, tt.leftValue);
-            expect(exp?.operator).toBe(tt.operator);
-            testIntegerLiteral(exp?.right as IntegerLiteral, tt.rightValue);
+            const exp = stmt.expression;
+            testInfixExpression(exp as InfixExpression, tt.leftValue, tt.operator, tt.rightValue);
         });
     })
 
@@ -140,6 +150,16 @@ describe('parser', () => {
             { input: '5 > 4 == 3 < 4', expected: '((5 > 4) == (3 < 4))' },
             { input: '5 < 4 != 3 > 4', expected: '((5 < 4) != (3 > 4))' },
             { input: '3 + 4 * 5 == 3 * 1 + 4 * 5', expected: '((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))' },
+            { input: 'true', expected: 'true' },
+            { input: 'false', expected: 'false' },
+            { input: '3 > 5 == false', expected: '((3 > 5) == false)' },
+            { input: '3 < 5 == true', expected: '((3 < 5) == true)' },
+            { input: '1 + (2 + 3) + 4', expected: '((1 + (2 + 3)) + 4)' },
+            { input: '(5 + 5) * 2', expected: '((5 + 5) * 2)' },
+            { input: '2 / (5 + 5)', expected: '(2 / (5 + 5))' },
+            { input: '(5 + 5) * 2 * (5 + 5)', expected: '(((5 + 5) * 2) * (5 + 5))' },
+            { input: '-(5 + 5)', expected: '(-(5 + 5))' },
+            { input: '!(true == true)', expected: '(!(true == true))' },
         ]
         tests.forEach(tt => {
             const l = new Lexer(tt.input)
@@ -169,3 +189,38 @@ function testIntegerLiteral(il: IntegerLiteral, value: number) {
     expect(il.value).toBe(value);
     expect(il.tokenLiteral()).toBe(value.toString());
 }
+
+function testIdentifier(exp: Identifier, value: string) {
+    expect(exp.value).toBe(value)
+    expect(exp.tokenLiteral()).toBe(value)
+}
+
+function testLiteralExpression(exp: Expression, expected: any) {
+    switch (typeof expected) {
+        case 'number':
+            testIntegerLiteral(exp as IntegerLiteral, expected);
+            break;
+        case 'string':
+            testIdentifier(exp as Identifier, expected);
+            break;
+        case 'boolean':
+            // eslint-disable-next-line @typescript-eslint/ban-types
+            testBooleanLiteral(exp as Boolean, expected);
+            break;
+        default:
+            throw new Error(`type of exp not handled. got=${typeof expected}`);
+    }
+}
+
+function testInfixExpression(exp: InfixExpression, left: any, operator: string, right: any) {
+    testLiteralExpression(exp.left as Expression, left);
+    expect(exp.operator).toBe(operator);
+    testLiteralExpression(exp.right as Expression, right);
+}
+
+// eslint-disable-next-line @typescript-eslint/ban-types
+function testBooleanLiteral(bl: Boolean, value: boolean) {
+    expect(bl.value).toBe(value);
+    expect(bl.tokenLiteral()).toBe(value.toString());
+}
+
