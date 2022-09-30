@@ -225,3 +225,57 @@ export class Boolean implements Expression {
         return this.token.literal;
     }
 }
+
+export class BlockStatement implements Statement {
+    token: Token;
+    statements: Statement[];
+
+    constructor({ token, statements }: { token: Token; statements: Statement[] }) {
+        this.token = token;
+        this.statements = statements;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    statementNode() { }
+
+    tokenLiteral(): string {
+        return this.token.literal;
+    }
+
+    string(): string {
+        return this.statements.map((statement) => statement.string()).join('');
+    }
+}
+
+export class IfExpression implements Expression {
+    token: Token;
+    condition?: Expression;
+    consequence?: BlockStatement;
+    alternative?: BlockStatement;
+
+    constructor({ token, condition, consequence, alternative }: { token: Token; condition?: Expression; consequence?: BlockStatement; alternative?: BlockStatement }) {
+        this.token = token;
+        if (condition) {
+            this.condition = condition;
+        }
+        if (consequence) {
+            this.consequence = consequence;
+        }
+        if (alternative) {
+            this.alternative = alternative;
+        }
+    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    expressionNode() { }
+
+    tokenLiteral(): string {
+        return this.token.literal;
+    }
+
+    string(): string {
+        let out = `if ${this.condition?.string()} ${this.consequence?.string()}`;
+        if (this.alternative) {
+            out += ` else ${this.alternative.string()}`;
+        }
+        return out;
+    }
+}

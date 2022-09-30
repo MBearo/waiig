@@ -7,7 +7,8 @@ import {
     IntegerLiteral,
     LetStatement,
     PrefixExpression,
-    Boolean
+    Boolean,
+    IfExpression
 } from '../ast';
 import { Lexer } from '../lexer';
 import { Parser } from '../parser';
@@ -170,6 +171,45 @@ describe('parser', () => {
             console.log('actual', actual)
             expect(actual).toBe(tt.expected)
         })
+    })
+
+    test('test if expression', () => {
+        const input = 'if (x < y) { x }'
+        const l = new Lexer(input)
+        const p = new Parser(l)
+        checkParserErrors(p)
+        const program = p.parseProgram()
+        console.log('program', program)
+        expect(program.statements.length).toBe(1)
+        const stmt = program.statements[0] as ExpressionStatement
+        const exp = stmt.expression as IfExpression
+        console.log('exp',exp)
+        expect(exp).not.toBeNull()
+        testInfixExpression(exp.condition as InfixExpression, 'x', '<', 'y')
+        expect(exp?.consequence?.statements.length).toBe(1)
+        const consequence = exp?.consequence?.statements[0] as ExpressionStatement
+        testIdentifier(consequence.expression as Identifier, 'x')
+        expect(exp.alternative).toBeUndefined()
+    })
+
+    test('test if else expression', () => {
+        const input = 'if (x < y) { x } else { y }'
+        const l = new Lexer(input)
+        const p = new Parser(l)
+        checkParserErrors(p)
+        const program = p.parseProgram()
+        console.log('program', program)
+        expect(program.statements.length).toBe(1)
+        const stmt = program.statements[0] as ExpressionStatement
+        const exp = stmt.expression as IfExpression
+        expect(exp).not.toBeNull()
+        testInfixExpression(exp.condition as InfixExpression, 'x', '<', 'y')
+        expect(exp?.consequence?.statements.length).toBe(1)
+        const consequence = exp?.consequence?.statements[0] as ExpressionStatement
+        testIdentifier(consequence.expression as Identifier, 'x')
+        expect(exp.alternative?.statements.length).toBe(1)
+        const alternative = exp.alternative?.statements[0] as ExpressionStatement
+        testIdentifier(alternative.expression as Identifier, 'y')
     })
 })
 
