@@ -10,41 +10,39 @@ import {
     Boolean,
     IfExpression,
     FunctionLiteral,
-    CallExpression
+    CallExpression,
+    Statement
 } from '../ast';
 import { Lexer } from '../lexer';
 import { Parser } from '../parser';
 
 describe('parser', () => {
     test('test let statement', () => {
-        const input = `
-            let x = 5;
-            let y = 10;
-            let foobar = 838383;
-        `;
-        const l = new Lexer(input);
-        const p = new Parser(l);
-        checkParserErrors(p);
-        const program = p.parseProgram();
-        expect(program).not.toBeNull();
-        expect(program.statements.length).toBe(3);
-        const tests = [
-            { expectedIdentifier: 'x' },
-            { expectedIdentifier: 'y' },
-            { expectedIdentifier: 'foobar' },
-        ];
-        tests.forEach((tt, i) => {
-            const stmt = program.statements[i];
-            expect(stmt.tokenLiteral()).toBe('let');
-            expect(stmt instanceof LetStatement).toBeTruthy();
-            const letStmt = stmt as LetStatement;
-            expect(letStmt?.name?.value).toBe(tt.expectedIdentifier);
-            expect(letStmt?.name?.tokenLiteral()).toBe(tt.expectedIdentifier);
+        const test =[{
+            input: 'let x = 5;',
+            expectedIdentifier: 'x',
+            expectedValue: 5
+        }, {
+            input: 'let y = true;',
+            
+            expectedIdentifier: 'y',
+            expectedValue: true
+        }, {
+            input: 'let foobar = y;',
+            expectedIdentifier: 'foobar',
+            expectedValue: 'y'
+        }];
+        test.forEach((tt) => {
+            const l = new Lexer(tt.input);
+            const p = new Parser(l);
+            const program = p.parseProgram();
+            checkParserErrors(p);
+            expect(program.statements.length).toBe(1);
+            const stmt = program.statements[0];
+            testLetStatement(stmt, tt.expectedIdentifier);
+            const val = (stmt as LetStatement).value;
+            testLiteralExpression(val as Expression, tt.expectedValue);
         });
-        console.log('first statement', program);
-        if (program.errors.length > 0) {
-            console.log(program.errors);
-        }
     });
 
     test('test return statement', () => {
@@ -327,3 +325,9 @@ function testBooleanLiteral(bl: Boolean, value: boolean) {
     expect(bl.tokenLiteral()).toBe(value.toString());
 }
 
+function testLetStatement (stmt: Statement, name: string) {
+    expect(stmt.tokenLiteral()).toBe('let');
+    const letStmt = stmt as LetStatement;
+    expect(letStmt?.name?.value).toBe(name);
+    expect(letStmt?.name?.tokenLiteral()).toBe(name);
+}

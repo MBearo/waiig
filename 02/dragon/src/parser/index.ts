@@ -119,8 +119,9 @@ export class Parser {
         if (!this.expectPeek(TokenType.ASSIGN)) {
             return null;
         }
-        // todo 跳过对表达式的处理暂时
-        while (!this.curTokenIs(TokenType.SEMICOLON)) {
+        this.nextToken();
+        stmt.value = this.parseExpression(Precedence.LOWEST);
+        if (this.peekTokenIs(TokenType.SEMICOLON)) {
             this.nextToken();
         }
         return stmt;
@@ -131,8 +132,8 @@ export class Parser {
             token: this.curToken as Token
         });
         this.nextToken();
-        // todo 跳过对表达式的处理暂时
-        while (!this.curTokenIs(TokenType.SEMICOLON)) {
+        stmt.returnValue = this.parseExpression(Precedence.LOWEST);
+        if (this.peekTokenIs(TokenType.SEMICOLON)) {
             this.nextToken();
         }
         return stmt;
