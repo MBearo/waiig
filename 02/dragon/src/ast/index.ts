@@ -304,3 +304,28 @@ export class FunctionLiteral implements Expression {
         return `${this.tokenLiteral()}(${params}) ${this.body?.string()}`;
     }
 }
+
+export class CallExpression implements Expression {
+    token: Token;
+    function?: Expression;
+    arguments: Expression[];
+
+    constructor({ token, function: func, arguments: args }: { token: Token; function?: Expression; arguments: Expression[] }) {
+        this.token = token;
+        if (func) {
+            this.function = func;
+        }
+        this.arguments = args;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    expressionNode() { }
+
+    tokenLiteral(): string {
+        return this.token.literal;
+    }
+
+    string(): string {
+        const args = this.arguments.map((arg) => arg.string()).join(', ');
+        return `${this.function?.string()}(${args})`;
+    }
+}

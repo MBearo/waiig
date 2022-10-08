@@ -9,7 +9,8 @@ import {
     PrefixExpression,
     Boolean,
     IfExpression,
-    FunctionLiteral
+    FunctionLiteral,
+    CallExpression
 } from '../ast';
 import { Lexer } from '../lexer';
 import { Parser } from '../parser';
@@ -162,6 +163,9 @@ describe('parser', () => {
             { input: '(5 + 5) * 2 * (5 + 5)', expected: '(((5 + 5) * 2) * (5 + 5))' },
             { input: '-(5 + 5)', expected: '(-(5 + 5))' },
             { input: '!(true == true)', expected: '(!(true == true))' },
+            { input: 'a + add(b * c) + d', expected: '((a + add((b * c))) + d)' },
+            { input: 'add(a, b, 1, 2 * 3, 4 + 5, add(6, 7 * 8))', expected: 'add(a, b, 1, (2 * 3), (4 + 5), add(6, (7 * 8)))' },
+            { input: 'add(a + b + c * d / f + g)', expected: 'add((((a + b) + ((c * d) / f)) + g))' },
         ]
         tests.forEach(tt => {
             const l = new Lexer(tt.input)
@@ -252,6 +256,24 @@ describe('parser', () => {
             })
         })
     })
+
+    test('test call expression parsing', () => {
+        const input = 'add(1, 2 * 3, 4 + 5);'
+        const l = new Lexer(input)
+        const p = new Parser(l)
+        checkParserErrors(p)
+        const program = p.parseProgram()
+        console.log('program', program)
+        expect(program.statements.length).toBe(1)
+        const stmt = program.statements[0] as ExpressionStatement
+        const exp = stmt.expression as CallExpression
+        testIdentifier(exp.function as Identifier, 'add')
+        expect(exp.arguments.length).toBe(3)
+        testLiteralExpression(exp.arguments[0], 1)
+        testInfixExpression(exp.arguments[1] as InfixExpression, 2, '*', 3)
+        testInfixExpression(exp.arguments[2] as InfixExpression, 4, '+', 5)
+    })
+
 })
 
 function checkParserErrors(p: Parser) {

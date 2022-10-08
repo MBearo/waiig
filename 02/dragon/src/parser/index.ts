@@ -9,7 +9,8 @@ import {
     Boolean,
     IfExpression,
     BlockStatement,
-    FunctionLiteral
+    FunctionLiteral,
+    CallExpression
 } from "../ast";
 import type { Expression, Statement } from '../ast'
 import { Lexer } from "../lexer";
@@ -74,6 +75,7 @@ export class Parser {
         this.registerInfix(TokenType.NOT_EQ, this.parseInfixExpression);
         this.registerInfix(TokenType.LT, this.parseInfixExpression);
         this.registerInfix(TokenType.GT, this.parseInfixExpression);
+        this.registerInfix(TokenType.LPAREN, this.parseCallExpression);
     }
 
     nextToken() {
@@ -308,6 +310,35 @@ export class Parser {
             return null as any;
         }
         return identifiers;
+    }
+
+    parseCallExpression(functionName: Expression) {
+        const exp = new CallExpression({
+            token: this.curToken as Token,
+            function: functionName,
+            arguments: []
+        });
+        exp.arguments = this.parseCallArguments();
+        return exp;
+    }
+
+    parseCallArguments() {
+        const args: Expression[] = [];
+        if (this.peekTokenIs(TokenType.RPAREN)) {
+            this.nextToken();
+            return args;
+        }
+        this.nextToken();
+        args.push(this.parseExpression(Precedence.LOWEST));
+        while (this.peekTokenIs(TokenType.COMMA)) {
+            this.nextToken();
+            this.nextToken();
+            args.push(this.parseExpression(Precedence.LOWEST));
+        }
+        if (!this.expectPeek(TokenType.RPAREN)) {
+            return null as any;
+        }
+        return args;
     }
 
     expectPeek(t: TokenType) {
