@@ -279,3 +279,28 @@ export class IfExpression implements Expression {
         return out;
     }
 }
+
+export class FunctionLiteral implements Expression {
+    token: Token;
+    parameters: Identifier[];
+    body?: BlockStatement;
+
+    constructor({ token, parameters, body }: { token: Token; parameters: Identifier[]; body?: BlockStatement }) {
+        this.token = token;
+        this.parameters = parameters;
+        if (body) {
+            this.body = body;
+        }
+    }
+    // eslint-disable-next-line @typescript-eslint/no-empty-function
+    expressionNode() { }
+
+    tokenLiteral(): string {
+        return this.token.literal;
+    }
+
+    string(): string {
+        const params = this.parameters.map((p) => p.string()).join(', ');
+        return `${this.tokenLiteral()}(${params}) ${this.body?.string()}`;
+    }
+}

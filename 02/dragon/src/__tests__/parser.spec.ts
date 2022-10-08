@@ -8,7 +8,8 @@ import {
     LetStatement,
     PrefixExpression,
     Boolean,
-    IfExpression
+    IfExpression,
+    FunctionLiteral
 } from '../ast';
 import { Lexer } from '../lexer';
 import { Parser } from '../parser';
@@ -210,6 +211,46 @@ describe('parser', () => {
         expect(exp.alternative?.statements.length).toBe(1)
         const alternative = exp.alternative?.statements[0] as ExpressionStatement
         testIdentifier(alternative.expression as Identifier, 'y')
+    })
+
+    test('test function literal parsing', () => {
+        const input = 'fn(x, y) { x + y; }'
+        const l = new Lexer(input)
+        const p = new Parser(l)
+        checkParserErrors(p)
+        const program = p.parseProgram()
+        console.log('program', program)
+        expect(program.statements.length).toBe(1)
+        const stmt = program.statements[0] as ExpressionStatement
+        const functionLiteral = stmt.expression as FunctionLiteral
+        expect(functionLiteral.parameters.length).toBe(2)
+        testLiteralExpression(functionLiteral.parameters[0], 'x')
+        testLiteralExpression(functionLiteral.parameters[1], 'y')
+        expect(functionLiteral?.body?.statements.length).toBe(1)
+        const bodyStmt = functionLiteral?.body?.statements[0] as ExpressionStatement
+        testInfixExpression(bodyStmt.expression as InfixExpression, 'x', '+', 'y')
+    })
+
+    test('test function parameter parsing', () => {
+        const tests = [
+            { input: 'fn() {};', expectedParams: [] },
+            { input: 'fn(x) {};', expectedParams: ['x'] },
+            { input: 'fn(x, y, z) {};', expectedParams: ['x', 'y', 'z'] },
+        ]
+        tests.forEach(tt => {
+            const l = new Lexer(tt.input)
+            const p = new Parser(l)
+            checkParserErrors(p)
+            const program = p.parseProgram()
+            console.log('program', program)
+            expect(program.statements.length).toBe(1)
+            const stmt = program.statements[0] as ExpressionStatement
+            const functionLiteral = stmt.expression as FunctionLiteral
+            expect(functionLiteral.parameters.length).toBe(tt.expectedParams.length)
+            tt.expectedParams.forEach((ident, i) => {
+                testLiteralExpression(functionLiteral.parameters[i], ident)
+            })
+        })
     })
 })
 

@@ -8,7 +8,8 @@ import {
     ReturnStatement,
     Boolean,
     IfExpression,
-    BlockStatement
+    BlockStatement,
+    FunctionLiteral
 } from "../ast";
 import type { Expression, Statement } from '../ast'
 import { Lexer } from "../lexer";
@@ -63,6 +64,7 @@ export class Parser {
         this.registerPrefix(TokenType.FALSE, this.parseBoolean);
         this.registerPrefix(TokenType.LPAREN, this.parseGroupedExpression);
         this.registerPrefix(TokenType.IF, this.parseIfExpression)
+        this.registerPrefix(TokenType.FUNCTION, this.parseFunctionLiteral)
 
         this.registerInfix(TokenType.PLUS, this.parseInfixExpression);
         this.registerInfix(TokenType.MINUS, this.parseInfixExpression);
@@ -223,25 +225,25 @@ export class Parser {
         return exp;
     }
 
-    parseIfExpression(){
+    parseIfExpression() {
         const expression = new IfExpression({
             token: this.curToken as Token
         });
-        if(!this.expectPeek(TokenType.LPAREN)){
+        if (!this.expectPeek(TokenType.LPAREN)) {
             return null as any;
         }
         this.nextToken();
         expression.condition = this.parseExpression(Precedence.LOWEST);
-        if(!this.expectPeek(TokenType.RPAREN)){
+        if (!this.expectPeek(TokenType.RPAREN)) {
             return null as any;
         }
-        if(!this.expectPeek(TokenType.LBRACE)){
+        if (!this.expectPeek(TokenType.LBRACE)) {
             return null as any;
         }
         expression.consequence = this.parseBlockStatement();
-        if(this.peekTokenIs(TokenType.ELSE)){
+        if (this.peekTokenIs(TokenType.ELSE)) {
             this.nextToken();
-            if(!this.expectPeek(TokenType.LBRACE)){
+            if (!this.expectPeek(TokenType.LBRACE)) {
                 return null as any;
             }
             expression.alternative = this.parseBlockStatement();
@@ -249,20 +251,63 @@ export class Parser {
         return expression;
     }
 
-    parseBlockStatement(){
+    parseBlockStatement() {
         const block = new BlockStatement({
             token: this.curToken as Token,
             statements: []
         });
         this.nextToken();
-        while(!this.curTokenIs(TokenType.RBRACE) && !this.curTokenIs(TokenType.EOF)){
+        while (!this.curTokenIs(TokenType.RBRACE) && !this.curTokenIs(TokenType.EOF)) {
             const stmt = this.parseStatement();
-            if(stmt){
+            if (stmt) {
                 block.statements.push(stmt);
             }
             this.nextToken();
         }
         return block;
+    }
+
+    parseFunctionLiteral() {
+        const lit = new FunctionLiteral({
+            token: this.curToken as Token,
+            parameters: []
+        });
+        if (!this.expectPeek(TokenType.LPAREN)) {
+            return null as any;
+        }
+        lit.parameters = this.parseFunctionParameters();
+        if (!this.expectPeek(TokenType.LBRACE)) {
+            return null as any;
+        }
+        lit.body = this.parseBlockStatement();
+        return lit;
+    }
+
+    parseFunctionParameters() {
+        const identifiers: Identifier[] = [];
+        if (this.peekTokenIs(TokenType.RPAREN)) {
+            this.nextToken();
+            return identifiers;
+        }
+        this.nextToken();
+        const ident = new Identifier({
+            token: this.curToken as Token,
+            value: this.curToken?.literal as string
+        });
+        identifiers.push(ident);
+        while (this.peekTokenIs(TokenType.COMMA)) {
+            this.nextToken();
+            this.nextToken();
+            const ident = new Identifier({
+                token: this.curToken as Token,
+                value: this.curToken?.literal as string
+            });
+            identifiers.push(ident);
+        }
+        if (!this.expectPeek(TokenType.RPAREN)) {
+            return null as any;
+        }
+        return identifiers;
     }
 
     expectPeek(t: TokenType) {
